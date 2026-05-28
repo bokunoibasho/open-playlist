@@ -111,28 +111,39 @@ struct BrowserView: View {
 private struct DetectedStreamsList: View {
     let streams: [DetectedStream]
     @Environment(\.dismiss) private var dismiss
+    @State private var streamToAdd: DetectedStream?
 
     var body: some View {
         NavigationStack {
             List(streams) { stream in
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(stream.name?.isEmpty == false ? stream.name! : "(無題)")
-                        .font(.headline)
-                        .lineLimit(1)
-                    HStack(spacing: 8) {
-                        if let type = stream.mimeType, !type.isEmpty {
-                            Text(type)
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(stream.name?.isEmpty == false ? stream.name! : "(無題)")
+                            .font(.headline)
+                            .lineLimit(1)
+                        HStack(spacing: 8) {
+                            if let type = stream.mimeType, !type.isEmpty {
+                                Text(type)
+                            }
+                            if let duration = stream.duration, duration > 0 {
+                                Text(formatted(duration))
+                            }
                         }
-                        if let duration = stream.duration, duration > 0 {
-                            Text(formatted(duration))
-                        }
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    Text(stream.src)
-                        .font(.caption2.monospaced())
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        Text(stream.src)
+                            .font(.caption2.monospaced())
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                    Spacer(minLength: 0)
+                    Button {
+                        streamToAdd = stream
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                    }
+                    .buttonStyle(.borderless)
                 }
             }
             .overlay {
@@ -150,6 +161,9 @@ private struct DetectedStreamsList: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("閉じる") { dismiss() }
                 }
+            }
+            .sheet(item: $streamToAdd) { stream in
+                AddToPlaylistView(stream: stream)
             }
         }
     }
