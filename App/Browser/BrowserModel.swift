@@ -10,19 +10,45 @@ final class BrowserModel {
     private(set) var canGoForward = false
     private(set) var isLoading = false
     private(set) var progress = 0.0
+    private(set) var detectedStreams: [DetectedStream] = []
 
     @ObservationIgnored let webView: WKWebView
+    @ObservationIgnored private let detector: any MediaStreamDetecting
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
 
-    init(home: URL? = URL(string: "https://m.youtube.com")) {
+    init(
+        home: URL? = URL(string: "https://m.youtube.com"),
+        detector: any MediaStreamDetecting = UserScriptMediaDetector()
+    ) {
+        self.detector = detector
+
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+        detector.install(on: config.userContentController)
+
         webView = WKWebView(frame: .zero, configuration: config)
         webView.allowsBackForwardNavigationGestures = true
+
         startObserving()
+        detector.onDetect = { [weak self] stream in
+            self?.addDetectedStream(stream)
+        }
         if let home {
             webView.load(URLRequest(url: home))
         }
+    }
+
+    private func addDetectedStream(_ stream: DetectedStream) {
+        guard !detectedStreams.contains(where: { $0.src == stream.src }) else { return }
+        detectedStreams.append(stream)
+    }
+
+    private func handleURLChange(_ url: URL?) {
+        if url?.absoluteString != currentURL?.absoluteString {
+            detectedStreams.removeAll()
+        }
+        currentURL = url
     }
 
     func load(_ input: String) {
@@ -53,7 +79,7 @@ final class BrowserModel {
                 MainActor.assumeIsolated { self?.pageTitle = wv.title ?? "" }
             },
             webView.observe(\.url, options: [.initial, .new]) { [weak self] wv, _ in
-                MainActor.assumeIsolated { self?.currentURL = wv.url }
+                MainActor.assumeIsolated { self?.handleURLChange(wv.url) }
             },
         ]
     }
