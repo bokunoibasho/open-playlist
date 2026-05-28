@@ -2,8 +2,8 @@ import Foundation
 import SwiftData
 
 /// A saved item in a playlist (DESIGN.md §5). The stream URL is never stored —
-/// it is short-lived and re-resolved at playback time (Phase 4) from
-/// `sourceURL` / `providerID`. `localFileURL` is set only once downloaded (Phase 6).
+/// it is short-lived and re-resolved at playback time (Phase 5) from
+/// `sourceURL` / `providerID`. `localFileURL` is set only once downloaded (Phase 7).
 @Model
 final class Track {
     var sourceURL: URL
