@@ -23,6 +23,11 @@ final class BrowserModel {
         self.detector = detector
 
         let config = WKWebViewConfiguration()
+        // Issue #7: コールド起動ごとに閲覧データ（履歴 / Cookie / キャッシュ / localStorage）を
+        // 残さない。YouTube にログインしない運用なので非永続ストアで全消去して支障なし。
+        // 非永続ストアはディスクに書かずプロセス生存中のみメモリ保持するため、新プロセス＝空、
+        // バックグラウンド→復帰（同一プロセス）では維持、という Issue の受け入れ条件を満たす。
+        config.websiteDataStore = .nonPersistent()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         detector.install(on: config.userContentController)
