@@ -1,0 +1,29 @@
+name: OpenPlaylist
+
+options:
+  bundleIdPrefix: com.openplaylist
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+
+targets:
+  OpenPlaylist:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.openplaylist.app
+        PRODUCT_NAME: OpenPlaylist
+        SWIFT_VERSION: "6.0"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Open Playlist
+        UIBackgroundModes:
+          - audio
+        UILaunchScreen: {}
