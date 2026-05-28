@@ -214,7 +214,7 @@ protocol StreamResolver {
 ## 9. 実装フェーズ（マイルストーン）
 
 > **リリース運用**: **Phase N = `v0.N.0`** に対応させる。Phase 1〜4 はリリース済み
-> （`v0.1.0`〜`v0.4.0`、Issue #7 のパッチが `v0.4.1`）。
+> （`v0.1.0`〜`v0.4.0`、Issue #7 のパッチが `v0.4.1`）。Phase 5 は本ブランチで実装。
 > 公開済みタグ・コミットメッセージは履歴として書き換えない（Phase 0 を `v0.1.0` で
 > 開始した経緯で、過去の注釈には旧番号が残る）。
 
@@ -222,7 +222,10 @@ protocol StreamResolver {
 - **Phase 2**（`v0.2.0` 済）: WKWebView 簡易ブラウザ（URL バー・ナビゲーション）。
 - **Phase 3**（`v0.3.0` 済）: Brave UserScript を `Vendor/Brave/` に移植・注入。stream 検出結果を画面に表示。
 - **Phase 4**（`v0.4.0` 済）: データモデル + PlaylistStore（追加・並べ替え・永続化）。
-- **Phase 5**: AVPlayer 再生 + NowPlayingService（バックグラウンド・ロック画面）。
+- **Phase 5**（`v0.5.0`）: AVPlayer 再生 + NowPlayingService（バックグラウンド・ロック画面）。
+  保存済み Track の stream URL はオフスクリーン WKWebView で UserScript を再実行して再生直前に
+  再解決（`StreamResolver` / `UserScriptStreamResolver`）。単一 AVPlayer + 自前キューで都度解決。
+  ミニプレイヤー + 全画面 Now Playing。
 - **Phase 6**: PiP 対応。
 - **Phase 7**: MediaDownloader（オフライン保存）。
 - **Phase 8**: ミュージックアプリ風 UI 仕上げ。

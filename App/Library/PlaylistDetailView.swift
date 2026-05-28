@@ -3,12 +3,18 @@ import SwiftUI
 
 struct PlaylistDetailView: View {
     @Environment(\.modelContext) private var context
+    @Environment(PlaybackController.self) private var controller
     @Bindable var playlist: Playlist
 
     var body: some View {
         List {
-            ForEach(playlist.orderedTracks) { track in
-                TrackRow(track: track)
+            ForEach(Array(playlist.orderedTracks.enumerated()), id: \.element.id) { index, track in
+                Button {
+                    controller.play(playlist.orderedTracks, startAt: index)
+                } label: {
+                    TrackRow(track: track, isCurrent: controller.currentTrack === track)
+                }
+                .buttonStyle(.plain)
             }
             .onMove(perform: move)
             .onDelete(perform: delete)
@@ -42,6 +48,7 @@ struct PlaylistDetailView: View {
 
 private struct TrackRow: View {
     let track: Track
+    var isCurrent = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -59,13 +66,23 @@ private struct TrackRow: View {
                 Text(track.title)
                     .font(.body)
                     .lineLimit(2)
+                    .foregroundStyle(isCurrent ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                 if let duration = track.durationSeconds, duration > 0 {
                     Text(formatted(duration))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Spacer(minLength: 0)
+
+            if isCurrent {
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.caption)
+                    .foregroundStyle(.tint)
+            }
         }
+        .contentShape(Rectangle())
     }
 
     private func formatted(_ seconds: Double) -> String {
