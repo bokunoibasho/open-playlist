@@ -213,25 +213,30 @@ protocol StreamResolver {
 
 ## 9. 実装フェーズ（マイルストーン）
 
-- **Phase 0**: Xcode プロジェクト雛形、Background Modes / AVAudioSession 設定、リポジトリ構成。
-- **Phase 1**: WKWebView 簡易ブラウザ（URL バー・ナビゲーション）。
-- **Phase 2**: Brave UserScript を `Vendor/Brave/` に移植・注入。stream 検出結果を画面に表示。
-- **Phase 3**: データモデル + PlaylistStore（追加・並べ替え・永続化）。
-- **Phase 4**: AVPlayer 再生 + NowPlayingService（バックグラウンド・ロック画面）。
-- **Phase 5**: PiP 対応。
-- **Phase 6**: MediaDownloader（オフライン保存）。
-- **Phase 7**: ミュージックアプリ風 UI 仕上げ。
+> **リリース運用**: **Phase N = `v0.N.0`** に対応させる。Phase 1〜4 はリリース済み
+> （`v0.1.0`〜`v0.4.0`、Issue #7 のパッチが `v0.4.1`）。
+> 公開済みタグ・コミットメッセージは履歴として書き換えない（Phase 0 を `v0.1.0` で
+> 開始した経緯で、過去の注釈には旧番号が残る）。
+
+- **Phase 1**（`v0.1.0` 済）: Xcode プロジェクト雛形、Background Modes / AVAudioSession 設定、リポジトリ構成。
+- **Phase 2**（`v0.2.0` 済）: WKWebView 簡易ブラウザ（URL バー・ナビゲーション）。
+- **Phase 3**（`v0.3.0` 済）: Brave UserScript を `Vendor/Brave/` に移植・注入。stream 検出結果を画面に表示。
+- **Phase 4**（`v0.4.0` 済）: データモデル + PlaylistStore（追加・並べ替え・永続化）。
+- **Phase 5**: AVPlayer 再生 + NowPlayingService（バックグラウンド・ロック画面）。
+- **Phase 6**: PiP 対応。
+- **Phase 7**: MediaDownloader（オフライン保存）。
+- **Phase 8**: ミュージックアプリ風 UI 仕上げ。
 
 ---
 
 ## 10. Claude Code 最初のタスク
 
-1. Phase 0: Xcode プロジェクト作成、Background Modes 有効化、リポジトリ構成
+1. Phase 1: Xcode プロジェクト作成、Background Modes 有効化、リポジトリ構成
    （`App/` と `Vendor/Brave/` の骨組み、`VENDOR_NOTES.md`）。
 2. `brave-core` を clone し、`src/brave/ios/brave-ios` 配下から
    Playlist UserScript と stream 検出ロジックを特定 → `Vendor/Brave/` に取り込み。
-3. Phase 1: WKWebView の簡易ブラウザを動かす。
-4. Phase 2: UserScript を注入し、YouTube ページで stream 検出ログが出る所まで。
+3. Phase 2: WKWebView の簡易ブラウザを動かす。
+4. Phase 3: UserScript を注入し、YouTube ページで stream 検出ログが出る所まで。
 
 ---
 

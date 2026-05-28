@@ -71,7 +71,7 @@ struct PlaylistStore {
     }
 
     /// Extracts a YouTube video ID from a page URL, handling watch?v=, youtu.be/,
-    /// and /shorts//embed/ forms. Used as the re-resolution key in Phase 4.
+    /// and /shorts//embed/ forms. Used as the re-resolution key in Phase 5.
     static func youTubeVideoID(from url: URL) -> String? {
         guard let host = url.host()?.lowercased() else { return nil }
 
