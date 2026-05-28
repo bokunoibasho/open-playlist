@@ -12,12 +12,14 @@ targets:
     platform: iOS
     sources:
       - App
+      - path: Vendor/Brave/UserScripts
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.openplaylist.app
         PRODUCT_NAME: OpenPlaylist
         SWIFT_VERSION: "6.0"
-        MARKETING_VERSION: "0.1.0"
+        MARKETING_VERSION: "0.3.0"
         CURRENT_PROJECT_VERSION: "1"
         TARGETED_DEVICE_FAMILY: "1"
     info:

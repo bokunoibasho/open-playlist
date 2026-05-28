@@ -3,6 +3,7 @@ import SwiftUI
 struct BrowserView: View {
     @State private var model = BrowserModel()
     @State private var address = ""
+    @State private var showDetected = false
     @FocusState private var addressFocused: Bool
 
     var body: some View {
@@ -14,6 +15,9 @@ struct BrowserView: View {
         }
         .onChange(of: model.currentURL, initial: true) { _, url in
             if !addressFocused { address = url?.absoluteString ?? "" }
+        }
+        .sheet(isPresented: $showDetected) {
+            DetectedStreamsList(streams: model.detectedStreams)
         }
     }
 
@@ -76,14 +80,83 @@ struct BrowserView: View {
 
             Spacer()
 
+            Button { showDetected = true } label: {
+                Image(systemName: "music.note.list")
+                    .overlay(alignment: .topTrailing) {
+                        if !model.detectedStreams.isEmpty {
+                            Text("\(model.detectedStreams.count)")
+                                .font(.caption2.bold())
+                                .foregroundStyle(.white)
+                                .padding(5)
+                                .background(.red, in: Circle())
+                                .offset(x: 12, y: -10)
+                        }
+                    }
+            }
+            .disabled(model.detectedStreams.isEmpty)
+
+            Spacer()
+
             Button { model.load("https://m.youtube.com") } label: {
                 Image(systemName: "house")
             }
         }
         .font(.title3)
-        .padding(.horizontal, 32)
+        .padding(.horizontal, 28)
         .padding(.vertical, 10)
         .background(.bar)
+    }
+}
+
+private struct DetectedStreamsList: View {
+    let streams: [DetectedStream]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List(streams) { stream in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(stream.name?.isEmpty == false ? stream.name! : "(無題)")
+                        .font(.headline)
+                        .lineLimit(1)
+                    HStack(spacing: 8) {
+                        if let type = stream.mimeType, !type.isEmpty {
+                            Text(type)
+                        }
+                        if let duration = stream.duration, duration > 0 {
+                            Text(formatted(duration))
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    Text(stream.src)
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+            .overlay {
+                if streams.isEmpty {
+                    ContentUnavailableView(
+                        "検出なし",
+                        systemImage: "music.note.list",
+                        description: Text("動画ページで再生すると stream を検出します")
+                    )
+                }
+            }
+            .navigationTitle("検出した stream (\(streams.count))")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("閉じる") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func formatted(_ seconds: Double) -> String {
+        let total = Int(seconds)
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 }
 
