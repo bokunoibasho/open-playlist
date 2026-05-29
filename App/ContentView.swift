@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var controller = PlaybackController()
+    @State private var pip = PictureInPictureController()
     @State private var showingPlayer = false
 
     var body: some View {
@@ -12,6 +13,7 @@ struct ContentView: View {
                 .tabItem { Label("ブラウザ", systemImage: "globe") }
         }
         .environment(controller)
+        .environment(pip)
         .safeAreaInset(edge: .bottom) {
             if controller.currentTrack != nil {
                 MiniPlayerView { showingPlayer = true }
@@ -21,6 +23,12 @@ struct ContentView: View {
         .sheet(isPresented: $showingPlayer) {
             PlayerView()
                 .environment(controller)
+                .environment(pip)
+        }
+        .onAppear {
+            pip.setPlayer(controller.avPlayer)
+            // PiP's "return to app" control re-opens the Now Playing sheet.
+            pip.restoreUI = { showingPlayer = true }
         }
     }
 }

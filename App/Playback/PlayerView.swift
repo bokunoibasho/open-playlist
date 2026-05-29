@@ -4,6 +4,7 @@ import SwiftUI
 /// than polished — visual finish lands in Phase 8.
 struct PlayerView: View {
     @Environment(PlaybackController.self) private var controller
+    @Environment(PictureInPictureController.self) private var pip
     @Environment(\.dismiss) private var dismiss
 
     @State private var isScrubbing = false
@@ -30,6 +31,10 @@ struct PlayerView: View {
 
                 transportControls
 
+                if pip.isSupported {
+                    pipButton
+                }
+
                 if let error = controller.errorMessage {
                     Text(error)
                         .font(.footnote)
@@ -55,13 +60,19 @@ struct PlayerView: View {
 
     @ViewBuilder
     private func artwork(for track: Track) -> some View {
-        AsyncImage(url: track.thumbnailURL) { image in
-            image.resizable().aspectRatio(contentMode: .fit)
-        } placeholder: {
-            Image(systemName: "music.note")
-                .font(.system(size: 64))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        Group {
+            if controller.hasVideo {
+                PlayerLayerView(pip: pip)
+            } else {
+                AsyncImage(url: track.thumbnailURL) { image in
+                    image.resizable().aspectRatio(contentMode: .fit)
+                } placeholder: {
+                    Image(systemName: "music.note")
+                        .font(.system(size: 64))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
         .aspectRatio(16.0 / 9.0, contentMode: .fit)
@@ -122,6 +133,19 @@ struct PlayerView: View {
             .disabled(!controller.hasNext)
         }
         .tint(.primary)
+    }
+
+    private var pipButton: some View {
+        Button { pip.toggle() } label: {
+            Label(
+                pip.isActive ? "ピクチャ・イン・ピクチャを終了" : "ピクチャ・イン・ピクチャ",
+                systemImage: pip.isActive ? "pip.exit" : "pip.enter"
+            )
+            .font(.title3)
+            .labelStyle(.iconOnly)
+        }
+        .tint(.primary)
+        .disabled(!pip.isPossible)
     }
 
     private func timecode(_ seconds: Double) -> String {

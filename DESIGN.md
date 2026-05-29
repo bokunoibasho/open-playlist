@@ -226,7 +226,9 @@ protocol StreamResolver {
   保存済み Track の stream URL はオフスクリーン WKWebView で UserScript を再実行して再生直前に
   再解決（`StreamResolver` / `UserScriptStreamResolver`）。単一 AVPlayer + 自前キューで都度解決。
   ミニプレイヤー + 全画面 Now Playing。
-- **Phase 6**: PiP 対応。
+- **Phase 6**（`v0.6.0`）: PiP 対応。映像付きストリーム再生時に Now Playing へ実映像を表示し、
+  `AVPictureInPictureController` + `AVPlayerLayer` で PiP を起動（手動ボタン + バックグラウンド自動移行）。
+  音声のみの曲はサムネ表示にフォールバック。
 - **Phase 7**: MediaDownloader（オフライン保存）。
 - **Phase 8**: ミュージックアプリ風 UI 仕上げ。
 

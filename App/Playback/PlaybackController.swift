@@ -16,6 +16,9 @@ final class PlaybackController {
     private(set) var currentTime: Double = 0
     private(set) var duration: Double = 0
     private(set) var errorMessage: String?
+    /// True once the current item is known to carry a video track — drives
+    /// whether the UI shows live video (and PiP) vs. just the thumbnail.
+    private(set) var hasVideo = false
 
     @ObservationIgnored private var queue: [Track] = []
     @ObservationIgnored private var currentIndex = 0
@@ -44,6 +47,10 @@ final class PlaybackController {
 
     var hasNext: Bool { currentIndex + 1 < queue.count }
     var hasPrevious: Bool { currentIndex > 0 }
+
+    /// Read-only access to the underlying player, for video-layer rendering and
+    /// PiP only. Transport still goes through this controller's methods.
+    var avPlayer: AVPlayer { player }
 
     // MARK: - Transport
 
@@ -106,6 +113,7 @@ final class PlaybackController {
         duration = track.durationSeconds ?? 0
         errorMessage = nil
         isPlaying = false
+        hasVideo = false
 
         startTask?.cancel()
         startTask = Task { [weak self] in
@@ -169,13 +177,28 @@ final class PlaybackController {
     private func observeStatus(of item: AVPlayerItem) {
         statusObservation?.invalidate()
         statusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
-            guard item.status == .failed else { return }
-            let message = item.error?.localizedDescription
-            Task { @MainActor [weak self] in
-                self?.errorMessage = message ?? "再生に失敗しました"
-                self?.isPlaying = false
+            switch item.status {
+            case .readyToPlay:
+                Task { @MainActor [weak self] in await self?.detectVideoTrack(in: item) }
+            case .failed:
+                let message = item.error?.localizedDescription
+                Task { @MainActor [weak self] in
+                    self?.errorMessage = message ?? "再生に失敗しました"
+                    self?.isPlaying = false
+                }
+            default:
+                break
             }
         }
+    }
+
+    /// Once an item is ready, learn whether it carries video so the UI can show
+    /// the live layer (and enable PiP) instead of the thumbnail.
+    private func detectVideoTrack(in item: AVPlayerItem) async {
+        let tracks = try? await item.asset.loadTracks(withMediaType: .video)
+        // Ignore if a newer item became current while we were loading.
+        guard player.currentItem === item else { return }
+        hasVideo = !(tracks?.isEmpty ?? true)
     }
 
     private func handleEnd() {
