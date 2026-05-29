@@ -47,6 +47,7 @@ struct PlaylistDetailView: View {
 }
 
 private struct TrackRow: View {
+    @Environment(DownloadManager.self) private var downloads
     let track: Track
     var isCurrent = false
 
@@ -76,6 +77,8 @@ private struct TrackRow: View {
 
             Spacer(minLength: 0)
 
+            downloadIndicator
+
             if isCurrent {
                 Image(systemName: "speaker.wave.2.fill")
                     .font(.caption)
@@ -83,6 +86,48 @@ private struct TrackRow: View {
             }
         }
         .contentShape(Rectangle())
+        .contextMenu { downloadMenu }
+    }
+
+    @ViewBuilder
+    private var downloadIndicator: some View {
+        let state = downloads.state(for: track)
+        if case .downloading(let fraction)? = state {
+            ProgressView(value: fraction)
+                .progressViewStyle(.circular)
+                .controlSize(.small)
+        } else if case .failed? = state {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        } else if track.downloadFileName != nil {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    @ViewBuilder
+    private var downloadMenu: some View {
+        if case .downloading? = downloads.state(for: track) {
+            Button {
+                downloads.cancel(track)
+            } label: {
+                Label("ダウンロードをキャンセル", systemImage: "xmark.circle")
+            }
+        } else if track.downloadFileName != nil {
+            Button(role: .destructive) {
+                downloads.removeDownload(track)
+            } label: {
+                Label("ダウンロードを削除", systemImage: "trash")
+            }
+        } else {
+            Button {
+                downloads.download(track)
+            } label: {
+                Label("ダウンロード", systemImage: "arrow.down.circle")
+            }
+        }
     }
 
     private func formatted(_ seconds: Double) -> String {

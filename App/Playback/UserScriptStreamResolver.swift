@@ -36,6 +36,15 @@ final class UserScriptStreamResolver: NSObject, StreamResolver {
     }
 
     func resolve(_ track: Track) async throws -> URL {
+        // Defend against broken saved data (Issue #16): never feed a raw media URL
+        // to the offscreen web view. Loading an expired googlevideo… stream URL
+        // crashes the process. Only real web pages are resolvable; bail gracefully
+        // otherwise so the UI shows an error instead of dying.
+        guard Self.isResolvablePage(track.sourceURL) else {
+            Self.logger.error("Refusing to resolve non-page URL \(track.sourceURL.absoluteString, privacy: .public)")
+            throw StreamResolverError.noPlayableStream
+        }
+
         // Cancel any resolve still in flight (e.g. rapid next/prev taps).
         finish(throwing: CancellationError())
         attachToWindowIfNeeded()
@@ -71,6 +80,17 @@ final class UserScriptStreamResolver: NSObject, StreamResolver {
         }
         webView.alpha = 0
         window.insertSubview(webView, at: 0)
+    }
+
+    /// A `sourceURL` is resolvable only if it's an http(s) *page* — not a media
+    /// stream URL. `googlevideo.com` is YouTube's media CDN and the documented
+    /// broken-data case from Issue #16.
+    private static func isResolvablePage(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            return false
+        }
+        if url.host()?.lowercased().contains("googlevideo.com") == true { return false }
+        return true
     }
 
     private func consider(_ stream: DetectedStream) {

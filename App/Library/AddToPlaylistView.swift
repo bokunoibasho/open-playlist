@@ -4,6 +4,9 @@ import SwiftUI
 /// Sheet for adding a detected stream to a playlist (new or existing).
 struct AddToPlaylistView: View {
     let stream: DetectedStream
+    /// The browser's current page URL — the authoritative watch-page source for
+    /// the saved Track's `sourceURL` (Issue #16). Nil when unavailable.
+    var pageURL: URL?
 
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -54,12 +57,12 @@ struct AddToPlaylistView: View {
         let store = PlaylistStore(context: context)
         let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         let playlist = store.createPlaylist(name: trimmed.isEmpty ? "新しいプレイリスト" : trimmed)
-        store.add(stream, to: playlist)
+        store.add(stream, to: playlist, pageURL: pageURL)
         dismiss()
     }
 
     private func add(to playlist: Playlist) {
-        PlaylistStore(context: context).add(stream, to: playlist)
+        PlaylistStore(context: context).add(stream, to: playlist, pageURL: pageURL)
         dismiss()
     }
 }

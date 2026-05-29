@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @State private var controller = PlaybackController()
     @State private var pip = PictureInPictureController()
+    @State private var downloads = DownloadManager()
     @State private var showingPlayer = false
 
     var body: some View {
@@ -14,6 +15,7 @@ struct ContentView: View {
         }
         .environment(controller)
         .environment(pip)
+        .environment(downloads)
         .safeAreaInset(edge: .bottom) {
             if controller.currentTrack != nil {
                 MiniPlayerView { showingPlayer = true }

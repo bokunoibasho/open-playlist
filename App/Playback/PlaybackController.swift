@@ -116,6 +116,15 @@ final class PlaybackController {
         hasVideo = false
 
         startTask?.cancel()
+
+        // Downloaded tracks play straight from disk (DESIGN.md §6.3): no
+        // re-resolution, so it works offline and skips the fragile re-resolve
+        // path entirely (Issue #16).
+        if let local = track.localFileURL, FileManager.default.fileExists(atPath: local.path) {
+            beginPlayback(url: local)
+            return
+        }
+
         startTask = Task { [weak self] in
             guard let self else { return }
             self.isResolving = true
