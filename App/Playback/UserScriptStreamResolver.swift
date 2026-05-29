@@ -109,8 +109,38 @@ final class UserScriptStreamResolver: NSObject, StreamResolver {
             finish(throwing: StreamResolverError.invalidStreamURL)
             return
         }
+        guard Self.isDownloadablePlaybackStream(url) else {
+            Self.logger.log("Ignoring unsupported stream: \(url.absoluteString, privacy: .public)")
+            return
+        }
         Self.logger.log("Resolved stream: \(url.absoluteString, privacy: .public)")
         finish(returning: url)
+    }
+
+    /// The resolver is currently used by downloads. Keep it to progressive
+    /// streams that iOS is likely to play back locally after download.
+    private static func isDownloadablePlaybackStream(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            return false
+        }
+
+        let ext = url.pathExtension.lowercased()
+        if ext == "m3u8" { return false }
+
+        let mime = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first { $0.name.lowercased() == "mime" }?
+            .value?
+            .lowercased()
+
+        guard let mime, !mime.isEmpty else { return true }
+        if mime.contains("webm") || mime.contains("mpegurl") || mime.contains("m3u8") {
+            return false
+        }
+        return mime.contains("video/mp4")
+            || mime.contains("audio/mp4")
+            || mime.contains("audio/m4a")
+            || mime.contains("audio/mpeg")
     }
 
     private func finish(returning url: URL) {

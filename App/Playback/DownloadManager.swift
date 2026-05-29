@@ -55,7 +55,9 @@ final class DownloadManager: NSObject {
         guard !isDownloaded(track) else { return }
 
         states[id] = .downloading(0)
-        Task { [weak self] in
+        // @MainActor so the post-resolve continuation mutates download state on
+        // the main actor (consistent with Issue #21's main-actor hop fix).
+        Task { @MainActor [weak self] in
             guard let self else { return }
             do {
                 let url = try await self.resolver.resolve(track)
@@ -104,16 +106,21 @@ final class DownloadManager: NSObject {
     private func complete(taskID: Int, fileName: String) {
         guard let track = trackByTask[taskID] else { return }
         let id = track.persistentModelID
+        let url = DownloadLocations.directory.appendingPathComponent(fileName)
         trackByTask[taskID] = nil
         taskByTrack[id] = nil
-        track.downloadFileName = fileName
-        do {
-            try track.modelContext?.save()
-            states[id] = nil
-        } catch {
-            try? FileManager.default.removeItem(at: DownloadLocations.directory.appendingPathComponent(fileName))
-            track.downloadFileName = nil
-            states[id] = .failed(error.localizedDescription)
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await Self.validatePlayableFile(at: url)
+                track.downloadFileName = fileName
+                try track.modelContext?.save()
+                states[id] = nil
+            } catch {
+                try? FileManager.default.removeItem(at: url)
+                track.downloadFileName = nil
+                states[id] = .failed(Self.message(for: error))
+            }
         }
     }
 
@@ -136,10 +143,12 @@ extension DownloadManager: URLSessionDownloadDelegate {
         let destination = DownloadLocations.directory.appendingPathComponent(fileName)
         let taskID = downloadTask.taskIdentifier
         do {
+            try Self.validateResponse(downloadTask.response)
+            try Self.validateNonEmptyFile(at: location)
             try? FileManager.default.removeItem(at: destination)
             try FileManager.default.moveItem(at: location, to: destination)
         } catch {
-            let message = error.localizedDescription
+            let message = Self.message(for: error)
             Task { @MainActor [weak self] in self?.fail(taskID: taskID, message: message) }
             return
         }
@@ -170,5 +179,62 @@ extension DownloadManager: URLSessionDownloadDelegate {
         let taskID = task.taskIdentifier
         let message = error.localizedDescription
         Task { @MainActor [weak self] in self?.fail(taskID: taskID, message: message) }
+    }
+}
+
+private enum DownloadValidationError: LocalizedError {
+    case badStatus(Int)
+    case unsupportedMime(String)
+    case emptyFile
+    case notPlayable
+
+    var errorDescription: String? {
+        switch self {
+        case .badStatus(let status):
+            "ダウンロードに失敗しました (HTTP \(status))"
+        case .unsupportedMime(let mime):
+            "この形式はローカル再生に対応していません (\(mime))"
+        case .emptyFile:
+            "ダウンロードしたファイルが空でした"
+        case .notPlayable:
+            "ダウンロードしたファイルを再生できません"
+        }
+    }
+}
+
+private extension DownloadManager {
+    nonisolated static func validateResponse(_ response: URLResponse?) throws {
+        if let http = response as? HTTPURLResponse,
+           !(200..<300).contains(http.statusCode) {
+            throw DownloadValidationError.badStatus(http.statusCode)
+        }
+
+        if response?.url?.pathExtension.lowercased() == "m3u8" {
+            throw DownloadValidationError.unsupportedMime("application/x-mpegURL")
+        }
+
+        guard let mime = response?.mimeType?.lowercased(), !mime.isEmpty else { return }
+        if mime.contains("webm") || mime.contains("mpegurl") || mime.contains("m3u8") {
+            throw DownloadValidationError.unsupportedMime(mime)
+        }
+        if mime.hasPrefix("text/") || mime == "application/json" {
+            throw DownloadValidationError.unsupportedMime(mime)
+        }
+    }
+
+    nonisolated static func validateNonEmptyFile(at url: URL) throws {
+        let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+        let size = (attributes[.size] as? NSNumber)?.int64Value ?? 0
+        if size <= 0 { throw DownloadValidationError.emptyFile }
+    }
+
+    static func validatePlayableFile(at url: URL) async throws {
+        guard await MediaValidation.hasPlayableMedia(at: url) else {
+            throw DownloadValidationError.notPlayable
+        }
+    }
+
+    nonisolated static func message(for error: Error) -> String {
+        (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
     }
 }

@@ -48,12 +48,12 @@ final class PictureInPictureController: NSObject {
         pipController = controller
 
         possibleObservation = controller.observe(\.isPictureInPicturePossible, options: [.initial, .new]) {
-            [weak self] controller, _ in
-            // KVO for AVPictureInPictureController is delivered on the main
-            // thread; read the (Sendable) Bool before hopping so the
-            // non-Sendable controller never crosses the isolation boundary.
+            @Sendable [weak self] controller, _ in
+            // @Sendable so this KVO callback isn't main-actor-isolated (the
+            // runtime would otherwise assert main-queue when it's delivered
+            // off-main — Issue #21). Read the Sendable Bool here, then hop.
             let possible = controller.isPictureInPicturePossible
-            MainActor.assumeIsolated {
+            Task { @MainActor [weak self] in
                 self?.isPossible = possible
             }
         }
@@ -73,20 +73,20 @@ extension PictureInPictureController: AVPictureInPictureControllerDelegate {
     nonisolated func pictureInPictureControllerDidStartPictureInPicture(
         _ pictureInPictureController: AVPictureInPictureController
     ) {
-        MainActor.assumeIsolated { isActive = true }
+        Task { @MainActor in isActive = true }
     }
 
     nonisolated func pictureInPictureControllerDidStopPictureInPicture(
         _ pictureInPictureController: AVPictureInPictureController
     ) {
-        MainActor.assumeIsolated { isActive = false }
+        Task { @MainActor in isActive = false }
     }
 
     nonisolated func pictureInPictureController(
         _ pictureInPictureController: AVPictureInPictureController,
         failedToStartPictureInPictureWithError error: Error
     ) {
-        MainActor.assumeIsolated {
+        Task { @MainActor in
             Self.logger.error("PiP failed to start: \(error.localizedDescription, privacy: .public)")
             isActive = false
         }
@@ -96,7 +96,7 @@ extension PictureInPictureController: AVPictureInPictureControllerDelegate {
         _ pictureInPictureController: AVPictureInPictureController,
         restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void
     ) {
-        MainActor.assumeIsolated { restoreUI?() }
+        Task { @MainActor in restoreUI?() }
         completionHandler(true)
     }
 }

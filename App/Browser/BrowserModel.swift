@@ -69,22 +69,34 @@ final class BrowserModel {
     private func startObserving() {
         observations = [
             webView.observe(\.canGoBack, options: [.initial, .new]) { [weak self] wv, _ in
-                MainActor.assumeIsolated { self?.canGoBack = wv.canGoBack }
+                DispatchQueue.main.async { [weak self, weak wv] in
+                    self?.canGoBack = wv?.canGoBack ?? false
+                }
             },
             webView.observe(\.canGoForward, options: [.initial, .new]) { [weak self] wv, _ in
-                MainActor.assumeIsolated { self?.canGoForward = wv.canGoForward }
+                DispatchQueue.main.async { [weak self, weak wv] in
+                    self?.canGoForward = wv?.canGoForward ?? false
+                }
             },
             webView.observe(\.isLoading, options: [.initial, .new]) { [weak self] wv, _ in
-                MainActor.assumeIsolated { self?.isLoading = wv.isLoading }
+                DispatchQueue.main.async { [weak self, weak wv] in
+                    self?.isLoading = wv?.isLoading ?? false
+                }
             },
             webView.observe(\.estimatedProgress, options: [.initial, .new]) { [weak self] wv, _ in
-                MainActor.assumeIsolated { self?.progress = wv.estimatedProgress }
+                DispatchQueue.main.async { [weak self, weak wv] in
+                    self?.progress = wv?.estimatedProgress ?? 0
+                }
             },
             webView.observe(\.title, options: [.initial, .new]) { [weak self] wv, _ in
-                MainActor.assumeIsolated { self?.pageTitle = wv.title ?? "" }
+                DispatchQueue.main.async { [weak self, weak wv] in
+                    self?.pageTitle = wv?.title ?? ""
+                }
             },
             webView.observe(\.url, options: [.initial, .new]) { [weak self] wv, _ in
-                MainActor.assumeIsolated { self?.handleURLChange(wv.url) }
+                DispatchQueue.main.async { [weak self, weak wv] in
+                    self?.handleURLChange(wv?.url)
+                }
             },
         ]
     }

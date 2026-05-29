@@ -1,13 +1,16 @@
 import AVFoundation
+import OSLog
 
 enum AudioSessionService {
+    private static let logger = Logger(subsystem: "com.openplaylist.app", category: "AudioSession")
+
     // Category is set at launch so background audio is wired up;
     // activate() is called when playback actually starts.
     static func configurePlayback() {
         do {
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         } catch {
-            assertionFailure("Failed to configure AVAudioSession: \(error)")
+            logger.error("Failed to configure AVAudioSession: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -17,7 +20,7 @@ enum AudioSessionService {
         do {
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
-            assertionFailure("Failed to activate AVAudioSession: \(error)")
+            logger.error("Failed to activate AVAudioSession: \(error.localizedDescription, privacy: .public)")
         }
     }
 
@@ -25,7 +28,7 @@ enum AudioSessionService {
         do {
             try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         } catch {
-            assertionFailure("Failed to deactivate AVAudioSession: \(error)")
+            logger.error("Failed to deactivate AVAudioSession: \(error.localizedDescription, privacy: .public)")
         }
     }
 }

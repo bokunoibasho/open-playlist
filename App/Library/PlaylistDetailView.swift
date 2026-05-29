@@ -4,13 +4,14 @@ import SwiftUI
 struct PlaylistDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(PlaybackController.self) private var controller
+    @Environment(DownloadManager.self) private var downloads
     @Bindable var playlist: Playlist
 
     var body: some View {
         List {
             ForEach(Array(playlist.orderedTracks.enumerated()), id: \.element.id) { index, track in
                 Button {
-                    controller.play(playlist.orderedTracks, startAt: index)
+                    playOrDownload(track, at: index)
                 } label: {
                     TrackRow(track: track, isCurrent: controller.currentTrack === track)
                 }
@@ -43,6 +44,14 @@ struct PlaylistDetailView: View {
         let store = PlaylistStore(context: context)
         let ordered = playlist.orderedTracks
         for index in offsets { store.delete(ordered[index]) }
+    }
+
+    private func playOrDownload(_ track: Track, at index: Int) {
+        if downloads.isDownloaded(track) {
+            controller.play(playlist.orderedTracks, startAt: index)
+        } else {
+            downloads.download(track)
+        }
     }
 }
 
@@ -100,7 +109,7 @@ private struct TrackRow: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .font(.caption)
                 .foregroundStyle(.orange)
-        } else if track.downloadFileName != nil {
+        } else if downloads.isDownloaded(track) {
             Image(systemName: "arrow.down.circle.fill")
                 .font(.caption)
                 .foregroundStyle(.secondary)
