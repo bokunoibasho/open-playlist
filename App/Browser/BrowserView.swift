@@ -17,7 +17,7 @@ struct BrowserView: View {
             if !addressFocused { address = url?.absoluteString ?? "" }
         }
         .sheet(isPresented: $showDetected) {
-            DetectedStreamsList(streams: model.detectedStreams)
+            DetectedStreamsList(streams: model.detectedStreams, pageURL: model.currentURL)
         }
     }
 
@@ -110,6 +110,7 @@ struct BrowserView: View {
 
 private struct DetectedStreamsList: View {
     let streams: [DetectedStream]
+    var pageURL: URL?
     @Environment(\.dismiss) private var dismiss
     @State private var streamToAdd: DetectedStream?
 
@@ -163,7 +164,7 @@ private struct DetectedStreamsList: View {
                 }
             }
             .sheet(item: $streamToAdd) { stream in
-                AddToPlaylistView(stream: stream)
+                AddToPlaylistView(stream: stream, pageURL: pageURL)
             }
         }
     }

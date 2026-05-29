@@ -130,9 +130,8 @@ extension UserScriptMediaDetector: WKScriptMessageHandler {
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) {
-        // WKScriptMessageHandler callbacks are delivered on the main thread.
-        MainActor.assumeIsolated {
-            handle(message: message)
+        DispatchQueue.main.async { [weak self] in
+            self?.handle(message: message)
         }
     }
 }

@@ -36,6 +36,15 @@ final class UserScriptStreamResolver: NSObject, StreamResolver {
     }
 
     func resolve(_ track: Track) async throws -> URL {
+        // Defend against broken saved data (Issue #16): never feed a raw media URL
+        // to the offscreen web view. Loading an expired googlevideo… stream URL
+        // crashes the process. Only real web pages are resolvable; bail gracefully
+        // otherwise so the UI shows an error instead of dying.
+        guard Self.isResolvablePage(track.sourceURL) else {
+            Self.logger.error("Refusing to resolve non-page URL \(track.sourceURL.absoluteString, privacy: .public)")
+            throw StreamResolverError.noPlayableStream
+        }
+
         // Cancel any resolve still in flight (e.g. rapid next/prev taps).
         finish(throwing: CancellationError())
         attachToWindowIfNeeded()
@@ -73,6 +82,17 @@ final class UserScriptStreamResolver: NSObject, StreamResolver {
         window.insertSubview(webView, at: 0)
     }
 
+    /// A `sourceURL` is resolvable only if it's an http(s) *page* — not a media
+    /// stream URL. `googlevideo.com` is YouTube's media CDN and the documented
+    /// broken-data case from Issue #16.
+    private static func isResolvablePage(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            return false
+        }
+        if url.host()?.lowercased().contains("googlevideo.com") == true { return false }
+        return true
+    }
+
     private func consider(_ stream: DetectedStream) {
         guard pending != nil, !stream.src.isEmpty else { return }
 
@@ -89,8 +109,38 @@ final class UserScriptStreamResolver: NSObject, StreamResolver {
             finish(throwing: StreamResolverError.invalidStreamURL)
             return
         }
+        guard Self.isDownloadablePlaybackStream(url) else {
+            Self.logger.log("Ignoring unsupported stream: \(url.absoluteString, privacy: .public)")
+            return
+        }
         Self.logger.log("Resolved stream: \(url.absoluteString, privacy: .public)")
         finish(returning: url)
+    }
+
+    /// The resolver is currently used by downloads. Keep it to progressive
+    /// streams that iOS is likely to play back locally after download.
+    private static func isDownloadablePlaybackStream(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else {
+            return false
+        }
+
+        let ext = url.pathExtension.lowercased()
+        if ext == "m3u8" { return false }
+
+        let mime = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?
+            .first { $0.name.lowercased() == "mime" }?
+            .value?
+            .lowercased()
+
+        guard let mime, !mime.isEmpty else { return true }
+        if mime.contains("webm") || mime.contains("mpegurl") || mime.contains("m3u8") {
+            return false
+        }
+        return mime.contains("video/mp4")
+            || mime.contains("audio/mp4")
+            || mime.contains("audio/m4a")
+            || mime.contains("audio/mpeg")
     }
 
     private func finish(returning url: URL) {

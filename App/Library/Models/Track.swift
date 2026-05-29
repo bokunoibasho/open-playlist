@@ -12,12 +12,22 @@ final class Track {
     var author: String?
     var durationSeconds: Double?
     var thumbnailURL: URL?
-    var localFileURL: URL?
+    /// Filename (relative to `DownloadLocations.directory`) of the offline copy,
+    /// set once downloaded (Phase 7). We persist only the name, not an absolute
+    /// path: the sandbox container path is not stable across launches/updates.
+    var downloadFileName: String?
     var dateAdded: Date
     /// Position within its playlist. SwiftData to-many relationships don't
     /// guarantee array order, so ordering is driven by this explicit field.
     var position: Int
     var playlist: Playlist?
+
+    /// Absolute URL of the downloaded file, rebuilt from `downloadFileName`.
+    /// Computed (transient) — playback prefers this over re-resolving the stream
+    /// (DESIGN.md §6.3). Callers must still confirm the file exists on disk.
+    var localFileURL: URL? {
+        downloadFileName.map { DownloadLocations.directory.appendingPathComponent($0) }
+    }
 
     init(
         sourceURL: URL,
@@ -26,7 +36,7 @@ final class Track {
         author: String? = nil,
         durationSeconds: Double? = nil,
         thumbnailURL: URL? = nil,
-        localFileURL: URL? = nil,
+        downloadFileName: String? = nil,
         dateAdded: Date = .now,
         position: Int = 0
     ) {
@@ -36,7 +46,7 @@ final class Track {
         self.author = author
         self.durationSeconds = durationSeconds
         self.thumbnailURL = thumbnailURL
-        self.localFileURL = localFileURL
+        self.downloadFileName = downloadFileName
         self.dateAdded = dateAdded
         self.position = position
     }
