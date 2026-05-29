@@ -1,6 +1,7 @@
 import AVKit
 import Observation
 import OSLog
+import SwiftUI
 
 /// Owns the Picture in Picture lifecycle (DESIGN.md §6.5). PiP needs an
 /// `AVPlayerLayer` living in the view hierarchy, but it must keep working after
@@ -28,12 +29,16 @@ final class PictureInPictureController: NSObject {
 
     @ObservationIgnored private var pipController: AVPictureInPictureController?
     @ObservationIgnored private var possibleObservation: NSKeyValueObservation?
+    /// The player bound via `setPlayer`. Kept so we can re-attach it to the layer
+    /// after detaching for background audio (see `handleScenePhase`).
+    @ObservationIgnored private var boundPlayer: AVPlayer?
 
     private static let logger = Logger(subsystem: "com.openplaylist.app", category: "PiP")
 
     /// Bind the player whose video should be PiP-able. Called once: the
     /// `PlaybackController` keeps a single `AVPlayer` for its lifetime.
     func setPlayer(_ player: AVPlayer) {
+        boundPlayer = player
         playerLayer.player = player
         playerLayer.videoGravity = .resizeAspect
 
@@ -65,6 +70,28 @@ final class PictureInPictureController: NSObject {
             pipController.stopPictureInPicture()
         } else if pipController.isPictureInPicturePossible {
             pipController.startPictureInPicture()
+        }
+    }
+
+    /// Keep audio playing when backgrounded (Issue #23). Downloaded tracks are
+    /// video-bearing mp4s; an `AVPlayerLayer` that stays attached to the player
+    /// but has no visible surface to render into (the Now Playing sheet is
+    /// usually dismissed) makes the player pause on background. Detaching the
+    /// player from the layer lets audio continue. PiP is the exception: while it
+    /// owns the video, background rendering is allowed, so we keep the layer
+    /// attached.
+    func handleScenePhase(_ phase: ScenePhase) {
+        switch phase {
+        case .active:
+            if playerLayer.player == nil { playerLayer.player = boundPlayer }
+        case .background:
+            if !(pipController?.isPictureInPictureActive ?? false) {
+                playerLayer.player = nil
+            }
+        case .inactive:
+            break
+        @unknown default:
+            break
         }
     }
 }

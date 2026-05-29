@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// Persistent bar shown above the tab bar while something is loaded. Tapping the
-/// body expands the full-screen `PlayerView`; the buttons act in place.
+/// Mini-player hosted in the tab view's bottom accessory (iOS 26) while
+/// something is loaded. Tapping the body expands the full-screen `PlayerView`;
+/// the buttons act in place. The accessory provides its own Liquid Glass
+/// background, so this view stays chrome-less.
 struct MiniPlayerView: View {
     @Environment(PlaybackController.self) private var controller
     let onExpand: () -> Void
@@ -34,7 +36,7 @@ struct MiniPlayerView: View {
                 } label: {
                     Image(systemName: controller.isPlaying ? "pause.fill" : "play.fill")
                         .font(.title3)
-                        .frame(width: 36, height: 36)
+                        .frame(width: 32, height: 32)
                 }
                 .disabled(controller.isResolving)
 
@@ -43,15 +45,12 @@ struct MiniPlayerView: View {
                 } label: {
                     Image(systemName: "forward.fill")
                         .font(.title3)
-                        .frame(width: 36, height: 36)
+                        .frame(width: 32, height: 32)
                 }
                 .disabled(!controller.hasNext)
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(.bar)
-            .overlay(alignment: .top) { Divider() }
             .contentShape(Rectangle())
             .onTapGesture(perform: onExpand)
         }
@@ -64,7 +63,7 @@ struct MiniPlayerView: View {
         } placeholder: {
             Image(systemName: "music.note").foregroundStyle(.secondary)
         }
-        .frame(width: 40, height: 40)
+        .frame(width: 36, height: 36)
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 6))
     }
