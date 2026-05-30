@@ -33,6 +33,9 @@ final class PlaybackController {
     @ObservationIgnored private var currentIndex = 0
     /// The unshuffled source order, so shuffle can be toggled off and restored.
     @ObservationIgnored private var baseOrder: [Track] = []
+    /// Set once the queue plays to its end with repeat off, so the next play
+    /// press restarts from the top instead of no-op'ing on the ended item (#27).
+    @ObservationIgnored private var didReachEnd = false
 
     @ObservationIgnored private let player = AVPlayer()
     @ObservationIgnored private let nowPlaying: NowPlayingService
@@ -73,12 +76,17 @@ final class PlaybackController {
         startCurrent()
     }
 
-    /// Play a whole list from the top — the playlist header's 再生 / シャッフル
-    /// buttons (Phase 8). Downloaded-only, so it no-ops on an all-unplayable list.
+    /// Play a whole list — the playlist header's 再生 / シャッフル buttons (Phase 8).
+    /// Shuffle randomizes the whole queue *including the first track*; in-order
+    /// play starts at the top. Downloaded-only, so it no-ops on an all-unplayable
+    /// list.
     func playAll(_ tracks: [Track], shuffled: Bool = false) {
         let playable = tracks.filter(isPlayable)
         guard !playable.isEmpty else { return }
-        play(playable, startAt: 0, shuffled: shuffled)
+        baseOrder = playable
+        isShuffled = shuffled
+        rebuildQueue(keeping: shuffled ? nil : playable[0])
+        startCurrent()
     }
 
     func toggleShuffle() {
@@ -95,17 +103,23 @@ final class PlaybackController {
         }
     }
 
-    /// Rebuilds `queue` from `baseOrder` for the current shuffle state, keeping
-    /// `current` as the now-playing item (placed first when shuffled).
-    private func rebuildQueue(keeping current: Track) {
+    /// Rebuilds `queue` from `baseOrder` for the current shuffle state. When
+    /// `current` is given it stays the now-playing item (placed first if
+    /// shuffled); when `nil` and shuffled, the whole queue is randomized — the
+    /// first track included (used by the シャッフル button).
+    private func rebuildQueue(keeping current: Track?) {
         if isShuffled {
-            var rest = baseOrder.filter { $0 !== current }
-            rest.shuffle()
-            queue = [current] + rest
+            if let current {
+                var rest = baseOrder.filter { $0 !== current }
+                rest.shuffle()
+                queue = [current] + rest
+            } else {
+                queue = baseOrder.shuffled()
+            }
         } else {
             queue = baseOrder
         }
-        currentIndex = queue.firstIndex { $0 === current } ?? 0
+        currentIndex = current.flatMap { c in queue.firstIndex { $0 === c } } ?? 0
     }
 
     func togglePlayPause() {
@@ -120,6 +134,13 @@ final class PlaybackController {
 
     func resume() {
         guard currentTrack != nil else { return }
+        // After the queue finished (repeat off), play restarts from the top of
+        // the playlist rather than no-op'ing on the ended item (#27).
+        if didReachEnd {
+            currentIndex = 0
+            startCurrent()
+            return
+        }
         AudioSessionService.activate()
         player.play()
         isPlaying = true
@@ -145,6 +166,7 @@ final class PlaybackController {
 
     func seek(to seconds: Double) {
         let clamped = max(0, seconds)
+        didReachEnd = false
         player.seek(to: CMTime(seconds: clamped, preferredTimescale: 600))
         currentTime = clamped
         updateNowPlaying()
@@ -166,6 +188,7 @@ final class PlaybackController {
         currentTime = 0
         duration = track.durationSeconds ?? 0
         errorMessage = nil
+        didReachEnd = false
         isPlaying = false
         isResolving = false
         hasVideo = false
@@ -309,6 +332,7 @@ final class PlaybackController {
                 next()
             } else {
                 isPlaying = false
+                didReachEnd = true
                 updateNowPlaying()
             }
         }
