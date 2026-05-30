@@ -249,9 +249,9 @@ struct PlayerView: View {
         )
     }
 
-    /// "1x", "0.5x", "1.25x" — %g drops trailing zeros so whole rates stay tidy.
+    /// "1×", "0.5×", "1.25×" — %g drops trailing zeros so whole rates stay tidy.
     private func rateLabel(_ rate: Float) -> String {
-        "\(String(format: "%g", Double(rate)))x"
+        "\(String(format: "%g", Double(rate)))×"
     }
 
     private var pipButton: some View {
