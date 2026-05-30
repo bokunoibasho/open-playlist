@@ -200,6 +200,10 @@ struct PlayerView: View {
 
             Spacer()
 
+            speedMenu
+
+            Spacer()
+
             if pip.isSupported {
                 pipButton
                 Spacer()
@@ -217,6 +221,35 @@ struct PlayerView: View {
 
     private var repeatSymbol: String {
         controller.repeatMode == .one ? "repeat.1" : "repeat"
+    }
+
+    // MARK: - Playback speed (#31)
+
+    private var speedMenu: some View {
+        Menu {
+            Picker("再生速度", selection: speedBinding) {
+                ForEach(PlaybackController.ratePresets, id: \.self) { rate in
+                    Text(rateLabel(rate)).tag(rate)
+                }
+            }
+        } label: {
+            Text(rateLabel(controller.playbackRate))
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+        }
+        .tint(controller.playbackRate == 1.0 ? .secondary : .accentColor)
+    }
+
+    private var speedBinding: Binding<Float> {
+        Binding(
+            get: { controller.playbackRate },
+            set: { controller.setPlaybackRate($0) }
+        )
+    }
+
+    /// "1x", "0.5x", "1.25x" — %g drops trailing zeros so whole rates stay tidy.
+    private func rateLabel(_ rate: Float) -> String {
+        "\(String(format: "%g", Double(rate)))x"
     }
 
     private var pipButton: some View {
