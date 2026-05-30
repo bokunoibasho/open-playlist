@@ -21,6 +21,31 @@ struct PlaylistStore {
         let track = Self.makeTrack(from: stream, position: playlist.tracks.count, pageURL: pageURL)
         context.insert(track)
         track.playlist = playlist
+        enrichMetadata(for: track)
+    }
+
+    /// Fills in the artist (and a cleaner title) shortly after adding, so the
+    /// add itself stays instant (Phase 8 / Issue #26). Only YouTube watch pages
+    /// expose oEmbed; everything else keeps the blank author line. Failures are
+    /// silent — this is display polish, not correctness.
+    func enrichMetadata(for track: Track) {
+        guard track.author == nil,
+              Self.youTubeVideoID(from: track.sourceURL) != nil else { return }
+        let sourceURL = track.sourceURL
+        let context = self.context
+        // Explicit @MainActor hop (consistent with Issue #21): mutate the model
+        // and save on the main actor after the network await resumes.
+        Task { @MainActor in
+            guard let meta = await MetadataService.fetchYouTube(for: sourceURL),
+                  track.modelContext != nil else { return }
+            if let author = Self.normalizeAuthor(meta.author) {
+                track.author = author
+            }
+            if track.title == "(無題)", let title = meta.title, !title.isEmpty {
+                track.title = title
+            }
+            try? context.save()
+        }
     }
 
     func move(in playlist: Playlist, from source: IndexSet, to destination: Int) {
@@ -81,6 +106,18 @@ struct PlaylistStore {
             thumbnailURL: thumbnailURL,
             position: position
         )
+    }
+
+    /// Tidies a channel/artist name: trims whitespace and drops YouTube's
+    /// auto-generated " - Topic" art-track suffix (Issue #26).
+    static func normalizeAuthor(_ name: String?) -> String? {
+        guard var trimmed = name?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty else { return nil }
+        if trimmed.hasSuffix(" - Topic") {
+            trimmed = String(trimmed.dropLast(" - Topic".count))
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private static func isWebPage(_ url: URL) -> Bool {

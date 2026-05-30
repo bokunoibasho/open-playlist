@@ -10,50 +10,72 @@ struct MiniPlayerView: View {
 
     var body: some View {
         if let track = controller.currentTrack {
-            HStack(spacing: 12) {
-                artwork(for: track)
+            VStack(spacing: 3) {
+                HStack(spacing: 12) {
+                    artwork(for: track)
 
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(track.title)
-                        .font(.subheadline)
-                        .lineLimit(1)
-                    if controller.isResolving {
-                        Text("読み込み中…")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    } else if let author = track.author, !author.isEmpty {
-                        Text(author)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(track.title)
+                            .font(.subheadline)
                             .lineLimit(1)
+                        if controller.isResolving {
+                            Text("読み込み中…")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        } else if let author = track.author, !author.isEmpty {
+                            Text(author)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
                     }
-                }
 
-                Spacer(minLength: 8)
+                    Spacer(minLength: 8)
 
-                Button {
-                    controller.togglePlayPause()
-                } label: {
-                    Image(systemName: controller.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.title3)
-                        .frame(width: 32, height: 32)
-                }
-                .disabled(controller.isResolving)
+                    Button {
+                        controller.togglePlayPause()
+                    } label: {
+                        Image(systemName: controller.isPlaying ? "pause.fill" : "play.fill")
+                            .font(.title3)
+                            .contentTransition(.symbolEffect(.replace))
+                            .frame(width: 32, height: 32)
+                    }
+                    .disabled(controller.isResolving)
 
-                Button {
-                    controller.next()
-                } label: {
-                    Image(systemName: "forward.fill")
-                        .font(.title3)
-                        .frame(width: 32, height: 32)
+                    Button {
+                        controller.next()
+                    } label: {
+                        Image(systemName: "forward.fill")
+                            .font(.title3)
+                            .frame(width: 32, height: 32)
+                    }
+                    .disabled(!controller.hasNext)
                 }
-                .disabled(!controller.hasNext)
+                .buttonStyle(.plain)
+                .tint(.primary)
+
+                progressLine
             }
-            .buttonStyle(.plain)
             .padding(.horizontal, 12)
             .contentShape(Rectangle())
             .onTapGesture(perform: onExpand)
         }
+    }
+
+    /// Slim playback progress under the row, accent-tinted.
+    private var progressLine: some View {
+        GeometryReader { geo in
+            let fraction = controller.duration > 0
+                ? min(max(controller.currentTime / controller.duration, 0), 1)
+                : 0
+            ZStack(alignment: .leading) {
+                Capsule().fill(.quaternary)
+                Capsule()
+                    .fill(Color.accentColor)
+                    .frame(width: geo.size.width * fraction)
+            }
+        }
+        .frame(height: 2)
     }
 
     @ViewBuilder
