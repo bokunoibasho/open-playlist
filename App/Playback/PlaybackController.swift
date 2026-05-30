@@ -19,9 +19,20 @@ final class PlaybackController {
     /// True once the current item is known to carry a video track — drives
     /// whether the UI shows live video (and PiP) vs. just the thumbnail.
     private(set) var hasVideo = false
+    /// Repeat mode for the queue (Phase 8): `.one` restarts the current track,
+    /// `.all` wraps past the end, `.off` stops at the end.
+    private(set) var repeatMode: RepeatMode = .off
+    /// Whether the queue is currently shuffled (Phase 8).
+    private(set) var isShuffled = false
+
+    enum RepeatMode: CaseIterable {
+        case off, all, one
+    }
 
     @ObservationIgnored private var queue: [Track] = []
     @ObservationIgnored private var currentIndex = 0
+    /// The unshuffled source order, so shuffle can be toggled off and restored.
+    @ObservationIgnored private var baseOrder: [Track] = []
 
     @ObservationIgnored private let player = AVPlayer()
     @ObservationIgnored private let nowPlaying: NowPlayingService
@@ -47,7 +58,7 @@ final class PlaybackController {
 
     // MARK: - Transport
 
-    func play(_ tracks: [Track], startAt index: Int) {
+    func play(_ tracks: [Track], startAt index: Int, shuffled: Bool = false) {
         guard tracks.indices.contains(index) else { return }
         let target = tracks[index]
         // Downloaded-only playback (DESIGN.md §6.3): keep just the tracks with a
@@ -55,10 +66,46 @@ final class PlaybackController {
         // track we can't play. The tapped track is guaranteed downloaded by the
         // caller, so it survives the filter.
         let playable = tracks.filter(isPlayable)
-        guard let start = playable.firstIndex(where: { $0 === target }) else { return }
-        queue = playable
-        currentIndex = start
+        guard playable.contains(where: { $0 === target }) else { return }
+        baseOrder = playable
+        isShuffled = shuffled
+        rebuildQueue(keeping: target)
         startCurrent()
+    }
+
+    /// Play a whole list from the top — the playlist header's 再生 / シャッフル
+    /// buttons (Phase 8). Downloaded-only, so it no-ops on an all-unplayable list.
+    func playAll(_ tracks: [Track], shuffled: Bool = false) {
+        let playable = tracks.filter(isPlayable)
+        guard !playable.isEmpty else { return }
+        play(playable, startAt: 0, shuffled: shuffled)
+    }
+
+    func toggleShuffle() {
+        guard let current = currentTrack else { return }
+        isShuffled.toggle()
+        rebuildQueue(keeping: current)
+    }
+
+    func cycleRepeatMode() {
+        repeatMode = switch repeatMode {
+        case .off: .all
+        case .all: .one
+        case .one: .off
+        }
+    }
+
+    /// Rebuilds `queue` from `baseOrder` for the current shuffle state, keeping
+    /// `current` as the now-playing item (placed first when shuffled).
+    private func rebuildQueue(keeping current: Track) {
+        if isShuffled {
+            var rest = baseOrder.filter { $0 !== current }
+            rest.shuffle()
+            queue = [current] + rest
+        } else {
+            queue = baseOrder
+        }
+        currentIndex = queue.firstIndex { $0 === current } ?? 0
     }
 
     func togglePlayPause() {
@@ -244,11 +291,26 @@ final class PlaybackController {
     }
 
     private func handleEnd() {
-        if hasNext {
-            next()
-        } else {
-            isPlaying = false
+        switch repeatMode {
+        case .one:
+            seek(to: 0)
+            player.play()
+            isPlaying = true
             updateNowPlaying()
+        case .all:
+            if hasNext {
+                next()
+            } else if !queue.isEmpty {
+                currentIndex = 0
+                startCurrent()
+            }
+        case .off:
+            if hasNext {
+                next()
+            } else {
+                isPlaying = false
+                updateNowPlaying()
+            }
         }
     }
 

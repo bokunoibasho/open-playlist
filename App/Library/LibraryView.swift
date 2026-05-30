@@ -15,12 +15,15 @@ struct LibraryView: View {
                     NavigationLink {
                         PlaylistDetailView(playlist: playlist)
                     } label: {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(playlist.name)
-                                .font(.headline)
-                            Text("\(playlist.tracks.count) 曲")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        HStack(spacing: 12) {
+                            PlaylistArtwork(playlist: playlist, size: 56)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(playlist.name)
+                                    .font(.headline)
+                                Text("\(playlist.tracks.count) 曲")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 }
