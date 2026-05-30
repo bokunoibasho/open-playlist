@@ -22,7 +22,7 @@ final class NowPlayingService {
 
     // MARK: - Now Playing info
 
-    func update(track: Track, isPlaying: Bool, elapsed: Double, duration: Double?) {
+    func update(track: Track, isPlaying: Bool, elapsed: Double, duration: Double?, rate: Float) {
         var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
         info[MPMediaItemPropertyTitle] = track.title
         info[MPMediaItemPropertyArtist] = track.author
@@ -31,7 +31,10 @@ final class NowPlayingService {
             info[MPMediaItemPropertyPlaybackDuration] = duration
         }
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = elapsed
-        info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? 1.0 : 0.0
+        // Report the real speed so the lock-screen / Control Center clock advances
+        // at the playback rate, not always 1× (#31).
+        info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? Double(rate) : 0.0
+        info[MPNowPlayingInfoPropertyDefaultPlaybackRate] = Double(rate)
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         loadArtwork(from: track.thumbnailURL)
     }

@@ -24,6 +24,14 @@ final class PlaybackController {
     private(set) var repeatMode: RepeatMode = .off
     /// Whether the queue is currently shuffled (Phase 8).
     private(set) var isShuffled = false
+    /// Current playback speed multiplier (Issue #31). Persisted across launches
+    /// and tracks; applied via `AVPlayer.defaultRate` so `play()` resumes at this
+    /// speed. `1.0` is normal speed.
+    private(set) var playbackRate: Float = PlaybackController.loadPersistedRate()
+
+    /// Selectable speeds, slow-biased for the English-song study use case (#31).
+    static let ratePresets: [Float] = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+    private static let rateDefaultsKey = "playbackRate"
 
     enum RepeatMode: CaseIterable {
         case off, all, one
@@ -48,6 +56,9 @@ final class PlaybackController {
     init(nowPlaying: NowPlayingService = NowPlayingService()) {
         self.nowPlaying = nowPlaying
         player.allowsExternalPlayback = false
+        // `play()` (resume / auto-advance / repeat-one) resumes at this rate, and
+        // the rate is restored after a stall/buffer (#31).
+        player.defaultRate = playbackRate
         addPeriodicTimeObserver()
         configureRemoteCommands()
     }
@@ -101,6 +112,25 @@ final class PlaybackController {
         case .all: .one
         case .one: .off
         }
+    }
+
+    /// Set the playback speed (#31). Persisted so it sticks across tracks and
+    /// launches. `defaultRate` makes future `play()` calls use it; we only touch
+    /// the live `rate` when already playing, since a non-zero `rate` on a paused
+    /// player would start playback.
+    func setPlaybackRate(_ rate: Float) {
+        let clamped = min(max(rate, Self.ratePresets.first!), Self.ratePresets.last!)
+        playbackRate = clamped
+        UserDefaults.standard.set(clamped, forKey: Self.rateDefaultsKey)
+        player.defaultRate = clamped
+        if isPlaying { player.rate = clamped }
+        updateNowPlaying()
+    }
+
+    private static func loadPersistedRate() -> Float {
+        guard UserDefaults.standard.object(forKey: rateDefaultsKey) != nil else { return 1.0 }
+        let saved = UserDefaults.standard.float(forKey: rateDefaultsKey)
+        return min(max(saved, ratePresets.first!), ratePresets.last!)
     }
 
     /// Rebuilds `queue` from `baseOrder` for the current shuffle state. When
@@ -242,6 +272,9 @@ final class PlaybackController {
 
     private func beginPlayback(url: URL) {
         let item = AVPlayerItem(url: url)
+        // Preserve pitch when slowed/sped up so songs stay singable (#31).
+        // `.spectral` is the highest-quality, music-suited algorithm.
+        item.audioTimePitchAlgorithm = .spectral
         observeEnd(of: item)
         observeStatus(of: item)
         player.replaceCurrentItem(with: item)
@@ -350,7 +383,8 @@ final class PlaybackController {
             track: track,
             isPlaying: isPlaying,
             elapsed: elapsed.isFinite ? elapsed : 0,
-            duration: duration > 0 ? duration : track.durationSeconds
+            duration: duration > 0 ? duration : track.durationSeconds,
+            rate: playbackRate
         )
     }
 

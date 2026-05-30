@@ -205,6 +205,12 @@ struct PlayerView: View {
                 Spacer()
             }
 
+            // Speed sits on the reachable right (next to repeat): it's the
+            // most-used control here, and PiP is often disabled for audio (#31).
+            speedMenu
+
+            Spacer()
+
             Button { controller.cycleRepeatMode() } label: {
                 Image(systemName: repeatSymbol)
                     .font(.title3)
@@ -217,6 +223,35 @@ struct PlayerView: View {
 
     private var repeatSymbol: String {
         controller.repeatMode == .one ? "repeat.1" : "repeat"
+    }
+
+    // MARK: - Playback speed (#31)
+
+    private var speedMenu: some View {
+        Menu {
+            Picker("再生速度", selection: speedBinding) {
+                ForEach(PlaybackController.ratePresets, id: \.self) { rate in
+                    Text(rateLabel(rate)).tag(rate)
+                }
+            }
+        } label: {
+            Text(rateLabel(controller.playbackRate))
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+        }
+        .tint(controller.playbackRate == 1.0 ? .secondary : .accentColor)
+    }
+
+    private var speedBinding: Binding<Float> {
+        Binding(
+            get: { controller.playbackRate },
+            set: { controller.setPlaybackRate($0) }
+        )
+    }
+
+    /// "1×", "0.5×", "1.25×" — %g drops trailing zeros so whole rates stay tidy.
+    private func rateLabel(_ rate: Float) -> String {
+        "\(String(format: "%g", Double(rate)))×"
     }
 
     private var pipButton: some View {
