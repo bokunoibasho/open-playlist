@@ -200,14 +200,16 @@ struct PlayerView: View {
 
             Spacer()
 
-            speedMenu
-
-            Spacer()
-
             if pip.isSupported {
                 pipButton
                 Spacer()
             }
+
+            // Speed sits on the reachable right (next to repeat): it's the
+            // most-used control here, and PiP is often disabled for audio (#31).
+            speedMenu
+
+            Spacer()
 
             Button { controller.cycleRepeatMode() } label: {
                 Image(systemName: repeatSymbol)
