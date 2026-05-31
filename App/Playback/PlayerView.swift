@@ -78,9 +78,10 @@ struct PlayerView: View {
     @ViewBuilder
     private func artwork(for track: Track) -> some View {
         if controller.hasVideo {
-            // Real video stays 16:9 (Apple Music has no video, but we do).
+            // Match the video's real aspect ratio so square art-track videos
+            // fill the frame instead of pillarboxing in a fixed 16:9 box (#44).
             PlayerLayerView(pip: pip)
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .aspectRatio(controller.videoAspectRatio, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .shadow(color: .black.opacity(0.3), radius: 18, y: 10)
                 .overlay { resolvingOverlay }

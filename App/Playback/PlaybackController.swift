@@ -19,6 +19,11 @@ final class PlaybackController {
     /// True once the current item is known to carry a video track — drives
     /// whether the UI shows live video (and PiP) vs. just the thumbnail.
     private(set) var hasVideo = false
+    /// Display aspect ratio (width / height) of the current video track, so the
+    /// inline player matches the real frame instead of a fixed 16:9 box — square
+    /// art-track videos otherwise pillarbox with black bars (#44). Defaults to
+    /// 16:9 until the track is inspected and whenever there's no video.
+    private(set) var videoAspectRatio: CGFloat = 16.0 / 9.0
     /// Repeat mode for the queue (Phase 8): `.one` restarts the current track,
     /// `.all` wraps past the end, `.off` stops at the end.
     private(set) var repeatMode: RepeatMode = .off
@@ -222,6 +227,7 @@ final class PlaybackController {
         isPlaying = false
         isResolving = false
         hasVideo = false
+        videoAspectRatio = 16.0 / 9.0
         player.pause()
         startTask?.cancel()
 
@@ -341,9 +347,22 @@ final class PlaybackController {
         }
 
         let tracks = try? await item.asset.loadTracks(withMediaType: .video)
+        // Read the real display ratio (naturalSize through preferredTransform, so
+        // rotated video is measured upright) to drop the fixed-16:9 black bars
+        // on square art-track videos (#44). Fall back to 16:9 on bad/empty data.
+        var ratio: CGFloat?
+        if let videoTrack = tracks?.first,
+           let loaded = try? await videoTrack.load(.naturalSize, .preferredTransform) {
+            let resolved = loaded.0.applying(loaded.1)
+            let width = abs(resolved.width), height = abs(resolved.height)
+            if width > 0, height > 0, width.isFinite, height.isFinite {
+                ratio = width / height
+            }
+        }
         // Ignore if a newer item became current while we were loading.
         guard player.currentItem === item else { return }
         hasVideo = !(tracks?.isEmpty ?? true)
+        videoAspectRatio = ratio ?? 16.0 / 9.0
     }
 
     private func handleEnd() {
