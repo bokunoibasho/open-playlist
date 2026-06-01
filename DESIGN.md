@@ -196,6 +196,11 @@ protocol StreamResolver {
 - `AVAudioSession` を `.playback` で有効化（バックグラウンド継続再生に必須）。
 - 最小 iOS: **26**（個人利用 / 開発者デバイスが iOS 26+。最新 AVKit / SwiftData / PiP API をフル活用）。
 - 端末の WKWebView を使用（Chromium 不要）。
+- **署名（実機）**: `DEVELOPMENT_TEAM` は gitignore した `Signing.local.xcconfig` にのみ置き、
+  追跡する `Config.xcconfig` が `#include?`（任意取り込み）し、`project.yml` の `configFiles`
+  から参照する。再生成しても値が維持され、Team ID はリポジトリに入らない。初回のみ
+  `cp Signing.local.xcconfig.example Signing.local.xcconfig` して自分の Team ID を記入する。
+  ファイル不在でも `xcodegen generate` とシミュレータビルドは通る（実機ビルドのみ要設定）。
 
 ---
 

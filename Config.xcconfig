@@ -1,0 +1,16 @@
+// Config.xcconfig — tracked base build configuration.
+//
+// Signing values (DEVELOPMENT_TEAM) are machine/account-specific and must NOT be
+// committed. They live in Signing.local.xcconfig, which is gitignored. Create it
+// once from the template:
+//
+//     cp Signing.local.xcconfig.example Signing.local.xcconfig
+//     # then set DEVELOPMENT_TEAM to your Apple Developer Team ID
+//
+// The optional include below (`#include?`) succeeds even when the file is absent,
+// so `xcodegen generate` and Simulator builds still work without it; only on-device
+// signing needs the local file.
+#include? "Signing.local.xcconfig"
+
+// Let Xcode manage certificates/profiles automatically once a team is set.
+CODE_SIGN_STYLE = Automatic
