@@ -16,6 +16,10 @@ build/
 *.dSYM.zip
 *.dSYM
 
+# Local-only signing (DEVELOPMENT_TEAM); optional-included by Config.xcconfig.
+# Bootstrap from Signing.local.xcconfig.example.
+Signing.local.xcconfig
+
 # Swift Package Manager
 .swiftpm/
 Package.resolved

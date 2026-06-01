@@ -1,0 +1,10 @@
+// Signing.local.xcconfig.example — template for local-only signing settings.
+//
+// Copy to Signing.local.xcconfig (gitignored) and fill in your Team ID:
+//
+//     cp Signing.local.xcconfig.example Signing.local.xcconfig
+//
+// DEVELOPMENT_TEAM is your Apple Developer Team ID (10 chars, e.g. ABCDE12345).
+// Find it in Xcode > Settings > Accounts, or developer.apple.com > Membership.
+// Required only for on-device builds; Simulator builds work without it.
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
