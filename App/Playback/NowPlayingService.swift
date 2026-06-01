@@ -65,13 +65,28 @@ final class NowPlayingService {
 
     private func applyArtwork(_ image: UIImage, for url: URL) {
         guard url == artworkURL else { return }  // a newer track won the race
+        let art = squareCropped(image)
         var info = MPNowPlayingInfoCenter.default().nowPlayingInfo ?? [:]
         // The request handler must be @Sendable: MediaPlayer invokes it on its
         // own (non-main) accessQueue. Without @Sendable the closure inherits this
         // type's @MainActor isolation, so the runtime's executor check trips
         // dispatch_assert_queue(main) and crashes (Issue #21).
-        info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
+        info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: art.size) { @Sendable _ in art }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+    }
+
+    /// Center-crops to a square (short-side²). Now Playing shows art in a square
+    /// slot, so handing it our 16:9 `mqdefault` makes the system letterbox it —
+    /// 1:1 art-track covers then keep the dark pillarbox bars baked into the
+    /// 16:9 frame. Cropping to the centered square drops those bars and presents
+    /// just the cover, matching the full-screen player's 1:1 art (#49).
+    private func squareCropped(_ image: UIImage) -> UIImage {
+        guard let cg = image.cgImage, cg.width != cg.height else { return image }
+        let side = min(cg.width, cg.height)
+        let rect = CGRect(x: (cg.width - side) / 2, y: (cg.height - side) / 2,
+                          width: side, height: side)
+        guard let cropped = cg.cropping(to: rect) else { return image }
+        return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
     }
 
     // MARK: - Remote commands
