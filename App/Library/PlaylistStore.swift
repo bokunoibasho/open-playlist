@@ -95,15 +95,11 @@ struct PlaylistStore {
             ?? candidates.first
             ?? URL(string: "about:blank")!
         let providerID = youTubeVideoID(from: sourceURL)
-        let thumbnailURL = providerID.flatMap {
-            URL(string: "https://img.youtube.com/vi/\($0)/hqdefault.jpg")
-        }
         return Track(
             sourceURL: sourceURL,
             providerID: providerID,
             title: bestTitle(for: stream),
             durationSeconds: stream.duration,
-            thumbnailURL: thumbnailURL,
             position: position
         )
     }
