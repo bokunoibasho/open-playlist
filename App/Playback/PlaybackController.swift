@@ -61,6 +61,14 @@ final class PlaybackController {
     init(nowPlaying: NowPlayingService = NowPlayingService()) {
         self.nowPlaying = nowPlaying
         player.allowsExternalPlayback = false
+        // Music-first app: allow the screen to auto-lock even during video
+        // playback (#56). AVPlayer otherwise prevents display sleep whenever the
+        // item has a video track — which is nearly always, since YouTube-sourced
+        // files carry a video track even for static-image music videos. With this
+        // off, audio keeps playing in the background and the lock screen shows
+        // artwork (#49); the only thing lost on lock is the moving video for MVs,
+        // an acceptable tradeoff for battery on long listening sessions.
+        player.preventsDisplaySleepDuringVideoPlayback = false
         // `play()` (resume / auto-advance / repeat-one) resumes at this rate, and
         // the rate is restored after a stall/buffer (#31).
         player.defaultRate = playbackRate
