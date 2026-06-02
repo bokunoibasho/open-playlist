@@ -173,6 +173,10 @@ protocol StreamResolver {
 - 再生前に `AVURLAsset` で再生可否（`isPlayable` + 音声/映像トラックの有無）を検証。壊れたファイルは
   破棄して再ダウンロードを促す。
 - `AVAudioSession` を `.playback` カテゴリで設定。
+- **再生中も画面の自動ロックを許可**（`preventsDisplaySleepDuringVideoPlayback = false`、#56）。
+  音楽優先アプリのため、動画トラックがあっても画面はロックさせる。ロック後も音声は
+  バックグラウンド継続再生し、ロック画面にアートワークが出る（§6.4 / #49）。失われるのは
+  MV の「動く映像」だけで、長時間リスニングの電池持ちを優先する。
 
 ### 6.4 NowPlayingService
 - `MPNowPlayingInfoCenter`: タイトル / アーティスト / アートワーク / 再生位置。
