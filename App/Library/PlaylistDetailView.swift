@@ -127,7 +127,13 @@ private struct TrackRow: View {
                 Image(systemName: "music.note")
                     .foregroundStyle(.secondary)
             }
-            .frame(width: 48, height: 36)
+            // Square (1:1) to match the music-first art focus. Square art-track
+            // videos arrive as a 16:9 mqdefault with the cover centered and
+            // pillarbox bars down each side; the old 48×36 (4:3) box still showed
+            // part of those side bars. At 48×48 the .fill + clipShape center-crops
+            // straight to the square cover, dropping them (#58; same crop approach
+            // as #46/#49).
+            .frame(width: 48, height: 48)
             .clipShape(RoundedRectangle(cornerRadius: 4))
             .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
 
