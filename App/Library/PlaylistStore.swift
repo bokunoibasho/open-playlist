@@ -14,6 +14,15 @@ struct PlaylistStore {
         return playlist
     }
 
+    /// Renames a playlist (Issue #38). Trims and ignores a blank name so an
+    /// accidental empty rename keeps the current title. SwiftData autosaves the
+    /// mutation, same as create/delete.
+    func rename(_ playlist: Playlist, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        playlist.name = trimmed
+    }
+
     /// Converts a detected stream into a Track and appends it to the playlist.
     /// `pageURL` is the browser's current page URL — the authoritative source for
     /// the watch page (see `makeTrack`).

@@ -8,6 +8,9 @@ struct LibraryView: View {
     @State private var showingNewPlaylist = false
     @State private var newPlaylistName = ""
 
+    @State private var renameTarget: Playlist?
+    @State private var renameName = ""
+
     var body: some View {
         NavigationStack {
             List {
@@ -22,6 +25,13 @@ struct LibraryView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
+                        }
+                    }
+                    .contextMenu {
+                        Button {
+                            startRename(playlist)
+                        } label: {
+                            Label("名前を変更", systemImage: "pencil")
                         }
                     }
                 }
@@ -62,12 +72,34 @@ struct LibraryView: View {
                 Button("作成") { createPlaylist() }
                 Button("キャンセル", role: .cancel) {}
             }
+            .alert("名前を変更", isPresented: isRenaming) {
+                TextField("名前", text: $renameName)
+                Button("保存") { commitRename() }
+                Button("キャンセル", role: .cancel) {}
+            }
         }
+    }
+
+    /// True while a rename alert is up; clearing it drops the target so the
+    /// alert dismisses (the Bool the alert needs, derived from the optional).
+    private var isRenaming: Binding<Bool> {
+        Binding(get: { renameTarget != nil }, set: { if !$0 { renameTarget = nil } })
     }
 
     private func createPlaylist() {
         let name = newPlaylistName.trimmingCharacters(in: .whitespacesAndNewlines)
         PlaylistStore(context: context).createPlaylist(name: name.isEmpty ? "新しいプレイリスト" : name)
+    }
+
+    private func startRename(_ playlist: Playlist) {
+        renameName = playlist.name
+        renameTarget = playlist
+    }
+
+    private func commitRename() {
+        guard let target = renameTarget else { return }
+        PlaylistStore(context: context).rename(target, to: renameName)
+        renameTarget = nil
     }
 
     private func delete(at offsets: IndexSet) {
