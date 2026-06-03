@@ -22,11 +22,15 @@ struct ContentView: View {
         .environment(controller)
         .environment(pip)
         .environment(downloads)
-        // Apply the accessory only while something is loaded, otherwise an empty
-        // glass capsule floats above the tab bar. Done via a ViewModifier on the
-        // stable `Content` placeholder (not an inline if/else around the TabView)
-        // so toggling it doesn't re-identify the tab subtree and tear down the
-        // browser's WKWebView (held in BrowserView's @State).
+        // Keep the bottom-accessory modifier *always applied* and toggle only the
+        // capsule's visibility. The earlier version added/removed the modifier
+        // itself (`if isPresented { content.tabViewBottomAccessory } else
+        // { content }`), which re-identifies the whole TabView the first time a
+        // track starts (currentTrack nil → non-nil): that tears down each tab's
+        // NavigationStack — popping the playlist detail back to the library — and
+        // the Browser tab's WKWebView. That was #60, reproducing only on the first
+        // play after launch (the one moment the accessory appeared). See
+        // MiniPlayerAccessory.
         .modifier(
             MiniPlayerAccessory(isPresented: controller.currentTrack != nil) {
                 MiniPlayerView { showingPlayer = true }
@@ -51,19 +55,24 @@ struct ContentView: View {
     }
 }
 
-/// Adds the iOS 26 tab-view bottom accessory only when `isPresented`, so the
-/// glass capsule disappears entirely when nothing is playing. Conditioning the
-/// `Content` placeholder (rather than the TabView itself) keeps tab/web-view
-/// identity stable across the toggle.
+/// Hosts the iOS 26 tab-view bottom accessory (mini-player). The modifier is
+/// applied unconditionally so the TabView keeps a stable identity — toggling the
+/// accessory on/off re-identifies the tab subtree, popping the pushed playlist
+/// detail and tearing down the Browser tab's WKWebView (#60). Visibility is
+/// driven by `isPresented`:
+/// - iOS 26.1+: the `isEnabled:` overload hides the glass capsule cleanly while
+///   nothing is playing.
+/// - iOS 26.0: that overload doesn't exist, so the capsule stays applied (still
+///   no pop); the only cost is an empty capsule while nothing plays.
 private struct MiniPlayerAccessory<Accessory: View>: ViewModifier {
     let isPresented: Bool
     @ViewBuilder var accessory: () -> Accessory
 
     func body(content: Content) -> some View {
-        if isPresented {
-            content.tabViewBottomAccessory { accessory() }
+        if #available(iOS 26.1, *) {
+            content.tabViewBottomAccessory(isEnabled: isPresented) { accessory() }
         } else {
-            content
+            content.tabViewBottomAccessory { accessory() }
         }
     }
 }
