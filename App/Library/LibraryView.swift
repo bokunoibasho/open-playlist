@@ -12,9 +12,7 @@ struct LibraryView: View {
         NavigationStack {
             List {
                 ForEach(playlists) { playlist in
-                    NavigationLink {
-                        PlaylistDetailView(playlist: playlist)
-                    } label: {
+                    NavigationLink(value: playlist) {
                         HStack(spacing: 12) {
                             PlaylistArtwork(playlist: playlist, size: 56)
                             VStack(alignment: .leading, spacing: 2) {
@@ -28,6 +26,16 @@ struct LibraryView: View {
                     }
                 }
                 .onDelete(perform: delete)
+            }
+            // Value-based navigation keeps the pushed detail bound to the stack's
+            // path rather than to the row's NavigationLink view. A legacy
+            // `NavigationLink { destination }` inside a @Query-driven List pops
+            // itself when the List is diffed/rebuilt — e.g. the first time
+            // playback mutates observed state — which surfaced as the detail
+            // view popping back to the library on the first shuffle after launch
+            // (#60).
+            .navigationDestination(for: Playlist.self) { playlist in
+                PlaylistDetailView(playlist: playlist)
             }
             .overlay {
                 if playlists.isEmpty {
