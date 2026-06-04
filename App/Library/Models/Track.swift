@@ -38,6 +38,16 @@ final class Track {
         }
     }
 
+    /// High-resolution cover (1280×720) for the few large surfaces — the
+    /// full-screen audio art and the lock screen. Exists only for HD uploads, so
+    /// callers must fall back to `thumbnailURL` when this 404s (#48). Loaded via
+    /// `ArtworkLoader`, which performs that fallback.
+    var highResThumbnailURL: URL? {
+        providerID.flatMap {
+            URL(string: "https://img.youtube.com/vi/\($0)/maxresdefault.jpg")
+        }
+    }
+
     init(
         sourceURL: URL,
         providerID: String? = nil,
