@@ -48,8 +48,12 @@ final class PictureInPictureController: NSObject {
             return
         }
         controller.delegate = self
-        // Auto-enter PiP when the app is backgrounded during video playback.
-        controller.canStartPictureInPictureAutomaticallyFromInline = true
+        // Don't auto-enter PiP when backgrounded: this is a music-first app and
+        // background *audio* is the preferred behaviour (#65). On background,
+        // `handleScenePhase` detaches the video layer so audio keeps playing with
+        // lock-screen artwork; PiP stays available as a manual control in the Now
+        // Playing UI.
+        controller.canStartPictureInPictureAutomaticallyFromInline = false
         pipController = controller
 
         possibleObservation = controller.observe(\.isPictureInPicturePossible, options: [.initial, .new]) {

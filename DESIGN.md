@@ -183,8 +183,11 @@ protocol StreamResolver {
 - `MPRemoteCommandCenter`: 再生・停止・次・前・シーク（ロック画面 / コントロールセンター / イヤホン操作）。
 
 ### 6.5 PiP
-- 映像付き再生時は `AVPictureInPictureController`。
-- 音声のみ用途が主なので、PiP は「映像も見たいとき」のオプション扱いで可。
+- 映像付き再生時は `AVPictureInPictureController`。**起動は手動のみ**（Now Playing の PiP ボタン）。
+- 音声のみ用途が主なので、PiP は「映像も見たいとき」のオプション扱い。
+- **ホームに戻る（バックグラウンド化）時は自動で PiP に移行せず、バックグラウンド音声再生にする**
+  （`canStartPictureInPictureAutomaticallyFromInline = false`、#65）。映像レイヤーを外して
+  音声を継続し、ロック画面にアートワークが出る（§6.3 / §6.4 / #49）。
 
 ### 6.6 MediaDownloader（オフライン保存）
 - progressive（mp4/m4a 直リンク）: `URLSession` のダウンロードタスク。
