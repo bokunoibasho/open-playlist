@@ -89,9 +89,9 @@ struct PlayerView: View {
             Color.clear
                 .aspectRatio(1, contentMode: .fit)
                 .overlay {
-                    AsyncImage(url: track.thumbnailURL) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
+                    // Prefer maxresdefault here (falls back to mqdefault) so the
+                    // large square art isn't an upscaled 320px blur (#48).
+                    TrackArtworkView(track: track) {
                         Image(systemName: "music.note")
                             .font(.system(size: 72))
                             .foregroundStyle(.secondary)

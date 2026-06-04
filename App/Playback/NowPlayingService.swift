@@ -36,7 +36,7 @@ final class NowPlayingService {
         info[MPNowPlayingInfoPropertyPlaybackRate] = isPlaying ? Double(rate) : 0.0
         info[MPNowPlayingInfoPropertyDefaultPlaybackRate] = Double(rate)
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
-        loadArtwork(from: track.thumbnailURL)
+        loadArtwork(highRes: track.highResThumbnailURL, fallback: track.thumbnailURL)
     }
 
     func clear() {
@@ -45,21 +45,22 @@ final class NowPlayingService {
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
     }
 
-    private func loadArtwork(from url: URL?) {
-        guard let url else { return }
-        guard url != artworkURL else { return }
-        artworkURL = url
+    private func loadArtwork(highRes: URL?, fallback: URL?) {
+        // Key dedup / race-guarding on the stable `mqdefault` URL: it's one per
+        // track regardless of whether the HD variant exists.
+        let key = fallback ?? highRes
+        guard let key, key != artworkURL else { return }
+        artworkURL = key
         artworkTask?.cancel()
         // Must be @MainActor: the continuation after the network await ends up
         // setting MPNowPlayingInfoCenter, which asserts it runs on the main
         // queue. Relying on inherited isolation let the resume land off-main and
         // crash (Issue #21). Explicit @MainActor forces the hop back to main.
         artworkTask = Task { @MainActor [weak self] in
-            guard let (data, _) = try? await URLSession.shared.data(from: url),
-                  let image = UIImage(data: data),
+            guard let image = await ArtworkLoader.load(highRes: highRes, fallback: fallback),
                   !Task.isCancelled
             else { return }
-            self?.applyArtwork(image, for: url)
+            self?.applyArtwork(image, for: key)
         }
     }
 
